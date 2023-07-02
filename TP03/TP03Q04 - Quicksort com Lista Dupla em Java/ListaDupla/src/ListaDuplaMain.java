@@ -1,41 +1,37 @@
 /**
- * @file QuickSortJava.java
+ * @file ListaDuplaMain.java
  * @author 784778 - Wallace Freitas Oliveira (https://github.com/Olivwallace)
- * @brief TP02Q13 - Algoritmo e Estruturas de Dados II (PUC-Minas 1°/2023)
- * @date 07-04-2023
+ * @brief TP03Q02 - Algoritmo e Estruturas de Dados II (PUC-Minas 1°/2023)
+ * @date 29-04-2023
  */
 
 import java.io.*;
 import java.util.ArrayList;
 
 //------------------------- Principal
-public class QuickSortJava {
+public class ListaDuplaMain {
 
     private static final String matricula = "784778";
     private static final File arq = new File(matricula + "_quicksortparcial.txt");
     public static FileWriter writer = null;
 
     public static void main(String[] args){
-        MyIO.setCharset("ISO-8859-1");
+        MyIO.setCharset("UTF-8");
         configuraLog();
         long startTime = System.currentTimeMillis(); //Inicia Temporizador
 
+        String caminho = MyIO.readString();
+        ListaDupla listaDupla = new ListaDupla(); //Inicializa Lista
 
-        ListaSeq listaPersonagens = new ListaSeq(); //Inicializa Lista
-
-        //Ler primeira entrada e linhas seguintes ate FIM
-        String in = MyIO.readLine().replace('é', '\u00e9');
-        while (!in.contains("FIM")) {
+        while (!caminho.contains("FIM")){ //Carrega lista com primeiras entradas
             try {
-                listaPersonagens.insereFinal(Personagem.toRead(in));
-                in = MyIO.readLine().replace('é', '\u00e9');
-            } catch (Exception ignored) {}
+                listaDupla.insereFinal(Personagem.toRead(caminho));
+                caminho = MyIO.readString();
+            }catch (Exception ignored){}
         }
 
-        //Ordena lista e imprime
-        listaPersonagens.QuickSort(41);
-        listaPersonagens.imprime(41);
-
+        listaDupla.sort();
+        listaDupla.imprime(); //Imprime conteudo final da lista
 
         //Finaliza Temporizador
         long endTime = System.currentTimeMillis();
@@ -43,7 +39,7 @@ public class QuickSortJava {
 
         //Armazena no arquivo os dados de execucao
         try{
-            int[] cmp_mov = listaPersonagens.getLogSort();
+            int[] cmp_mov = listaDupla.getLogSort();
             writer.write(matricula + "\t" + tempo / 1000.0 + "s\t" + cmp_mov[0] + "cmp\t" + cmp_mov[1] + "mov");
         }catch (IOException ignored){}
         finally {
@@ -51,7 +47,6 @@ public class QuickSortJava {
                 writer.close();
             }catch (IOException ignored){}
         }
-
     }
 
     /**
@@ -288,7 +283,7 @@ class Personagem {
         double peso = getPeso();
         int pesoInt = (int)peso;
 
-        return String.format("## %s ## %s ## %s%s ## %s ## %s ## %s ## %s ## %s ## %s ## ",
+        return String.format(" ## %s ## %s ## %s%s ## %s ## %s ## %s ## %s ## %s ## %s ## ",
                 getNome(), getAltura(), pesoInt, pesoInt == peso ? "" : "." + (int)((peso - pesoInt) * 10),
                 getCorDoCabelo(), getCorDaPele(), getCorDosOlhos(), getAnoNascimento(), getGenero(), getHomeworld()
         );
@@ -298,7 +293,8 @@ class Personagem {
      * Implementacao de Clone de um personagem
      * @return Object Personagem clone.
      */
-    protected Object clona() {
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
         return new Personagem(this);
     }
 
@@ -313,7 +309,7 @@ class Personagem {
 
         try {
 
-            //Realiza abetura da memória temporaria de entrada e ler da entrada padrao caminho para o registro
+            //Realiza abetura do buffer de entrada e ler da entrada padrao caminho para o registro
             BufferedReader buffer = new BufferedReader(new FileReader(caminho));
             String jsonStr = buffer.readLine(); //Realiza leitura do registro
 
@@ -335,156 +331,197 @@ class Personagem {
     }
 }
 
-//---------------------------- Classe Lista Sequencial
-class ListaSeq {
-    protected int tamMax;
-    protected int numItens;
-    protected Personagem[] lista;
+//---------------------------- Classes  Manipulacao de Lista Dinamica
+
+class itemLista{
+    private Personagem dado;
+    private itemLista prox, ant;
+
+    public itemLista(Personagem dado){
+        setDado(dado);
+        setProx(null);
+        setAnt(null);
+    }
+
+    public itemLista(Personagem dado, itemLista prox){
+        setProx(prox);
+        setAnt(null);
+        setDado(dado);
+    }
+
+    public itemLista(Personagem dado, itemLista prox, itemLista ant){
+        setProx(prox);
+        setAnt(ant);
+        setDado(dado);
+    }
+
+    //----------------------------- Setter's and Getter's
+
+    public Personagem getDado() {
+        return dado;
+    }
+
+    public void setDado(Personagem dado) {
+        this.dado = dado;
+    }
+
+    public itemLista getProx() {
+        return prox;
+    }
+
+    public void setProx(itemLista prox) {
+        this.prox = prox;
+    }
+
+    public itemLista getAnt() { return  ant;}
+
+    public void setAnt(itemLista ant){ this.ant = ant;}
+}
+
+class ListaDupla {
+    private int numItens;
+    private itemLista primeiro, ultimo;
     protected int[] logSort;
 
-    /**
-     * Criar lista com tamanho 100;
-     */
-    ListaSeq(){
-        this(50);
+    public ListaDupla(){
+        setNumItens(0);
+        setPrimeiro(null);
+        setUltimo(null);
+    }
+
+    public ListaDupla(Personagem dado){
+        setNumItens(numItens + 1);
+        itemLista tmp = new itemLista(dado);
+        setPrimeiro(tmp);
+        setUltimo(tmp);
     }
 
     /**
-     * Cria lista de tamanho determinado pelo usuario
-     * @param tamMax limite da lista
+     * Metodo responsavel pela inserçao
+     * @param dado Personagem a ser inserido
      */
-    ListaSeq(int tamMax){
-        this.tamMax = tamMax;
-        this.numItens = 0;
-        this.lista = new Personagem[tamMax];
+    public void insereFinal(Personagem dado){
+        itemLista novo = new itemLista(dado, null, null);
+
+        if(ultimo != null){
+            ultimo.setProx(novo);
+            novo.setAnt(ultimo);
+            ultimo = ultimo.getProx();
+        }else{
+            primeiro = ultimo = novo;
+        }
+
+        novo = null;
+        setNumItens(numItens + 1);
     }
 
     /**
-     * Realiza insercao no inicio da lista
-     * @param dado Dado a ser inserido
-     * @throws Exception MAX_RECHEAD - Lista Cheia
+     * Remove personagem que ocupa inicio.
+     * @return Personagem da posicao
      */
-    public void insereInicio(Personagem dado) throws Exception{
+    public Personagem removeInicio(){
+        Personagem personagem = null;
 
-        if(numItens < tamMax) {
-            for(int i = numItens; i > 0; i--){
-                lista[i] = lista[i - 1];
+        if(primeiro != null){
+            itemLista tmp = primeiro;        // Guarda endereço do primeiro
+            primeiro = primeiro.getProx();   // Atualiza Primeiro
+            personagem = tmp.getDado();      // Recupera dado
+            tmp.setProx(null);               // Remove Ponteiro do antigo primeiro
+            primeiro.setAnt(null);           // Remove Ponteiro de retorno ao antigo primeiro
+            tmp = null;                      // Libera tmp
+            setNumItens(numItens - 1);       // Atualiza número de itens
+        }
+
+        return personagem;
+    }
+
+    /**
+     * Imprime todos os elementos da lista
+     */
+    public void imprime(){
+        itemLista atual = primeiro;
+        for(int i = 0; i < numItens; i++){
+            MyIO.println(atual.getDado().toString());
+            atual = atual.getProx();
+        }
+    }
+
+    //----------------------------- Setter's and Getter's
+
+    public void setNumItens(int numItens) {
+        this.numItens = numItens;
+    }
+
+    public void setPrimeiro(itemLista primeiro){
+        this.primeiro = primeiro;
+    }
+
+    public void setUltimo(itemLista ultimo){
+        this.ultimo = ultimo;
+    }
+
+    public int[] getLogSort(){return  logSort;}
+
+    //----------------------------- Sort
+
+    /**
+     * Metodo intermediario para odernar atraves de quicksort.
+     */
+    public void sort(){
+        logSort = new int[2];
+        quickSort(primeiro, ultimo, 0, numItens - 1);
+    }
+
+    private void quickSort(itemLista i, itemLista f, int ini, int fim){
+        int esq = ini, dir = fim;
+        itemLista pEsq = i, pDir = f;
+
+        int meio = (ini + fim) / 2;
+        itemLista pivo = getPosicao(meio);
+
+        if(esq <= dir) {
+
+            while (comparar(pivo.getDado(), pEsq.getDado()) > 0){
+                pEsq = pEsq.getProx();
+                esq++;
+            }
+            while (comparar(pivo.getDado(), pDir.getDado()) < 0){
+                pDir = pDir.getAnt();
+                dir--;
             }
 
-            lista[0] = dado;
-            numItens++;
-        }else{
-            throw new Exception("MAX_RECHEAD");
-        }
-    }
-
-    /**
-     * Realiza insercao em posicao determinada da lista
-     * @param dado Dado a ser inserido
-     * @throws Exception MAX_RECHEAD - Lista Cheia
-     */
-    public void inserePosicao(Personagem dado, int pos) throws Exception{
-
-        if(numItens < tamMax){
-            for(int i = numItens; i > pos; i--){
-                lista[i] = lista[i - 1];
+            if (esq <= dir) {
+                swap(pEsq, pDir);
+                esq++;
+                dir--;
+                logSort[1] += 3;
             }
-
-            lista[pos] = dado;
-            numItens++;
-        }else{
-            throw new Exception("MAX_RECHEAD");
         }
+
+        if(ini < dir) quickSort(i, pDir.getAnt(), ini, dir);
+        if(esq < fim) quickSort(pEsq.getProx(), f, esq, fim);
     }
 
-    /**
-     * Realiza insercao no final da lista
-     * @param dado Dado a ser inserido
-     * @throws Exception MAX_RECHEAD - Lista Cheia
-     */
-    public void insereFinal(Personagem dado) throws Exception{
+    private itemLista getPosicao(int pos){
+        itemLista resposta = null;
+        if(primeiro != null){
 
-        if(numItens < tamMax){
-            lista[numItens] = dado;
-            numItens++;
-        }else{
-            throw new Exception("MAX_RECHEAD");
-        }
-    }
-
-    /**
-     * Recupera dado presente em lista.
-     * @return Dado recuperado
-     * @throws Exception LISTA_VAZIA
-     */
-    public Personagem removeInicio() throws Exception{
-        Personagem dadoRecuperado;
-
-        if(numItens != 0){
-            dadoRecuperado = lista[0];
-
-            for(int i = 0; i < numItens; i++){
-                lista[i] = lista[i + 1];
+            itemLista atual = primeiro;
+            for (int i = 0; i < pos; i++){
+                atual = atual.getProx();
             }
+            resposta = atual;
 
-            numItens--;
-        }else{
-            throw new Exception("LISTA_VAZIA");
         }
-
-        return dadoRecuperado;
+        return resposta;
     }
 
-    /**
-     * Recupera dado presente em determinada posicao da lista.
-     * @return Dado recuperado
-     * @throws Exception POSICAO_INVALIDA
-     */
-    public Personagem removePosicao(int pos) throws  Exception{
-        Personagem dadoRecuperado;
-
-        if(pos >= 0 && pos < numItens){
-            dadoRecuperado = lista[pos];
-
-            for(int i = pos; i < numItens; i++){
-                lista[i] = lista[i + 1];
-            }
-
-            numItens--;
-        }else{
-            throw new Exception("POSICAO_INVALIDA");
-        }
-
-        return dadoRecuperado;
-    }
-
-    /**
-     * Recupera dado presente no final da lista
-     * @return Dado recuperado
-     * @throws Exception LISTA_VAZIA
-     */
-    public Personagem removeFinal() throws Exception{
-        Personagem dadoRecuperado;
-
-        if(numItens != 0){
-            dadoRecuperado = lista[numItens - 1];
-            numItens--;
-        }else{
-            throw new Exception("LISTA_VAZIA");
-        }
-
-        return dadoRecuperado;
-    }
-
-    /**
-     * Realiza Impressao de dados presentes na lista
-     * @param k Numero de itens ordenados
-     */
-    public void imprime(int k){
-        Personagem p;
-        for(int i = 0; i < k; i++){
-            p = lista[i];
-            MyIO.println(" " + p.toString());
+    private void swap(itemLista i, itemLista j){
+        if(i != null && j != null){
+            Personagem temp = i.getDado();
+            i.setDado(j.getDado());
+            j.setDado(temp);
+            temp = null;
         }
     }
 
@@ -498,81 +535,24 @@ class ListaSeq {
         int result = 0;
 
         if(pivo != null && comparado != null) {
-           result = pivo.getCorDoCabelo()
-                   .compareToIgnoreCase(comparado.getCorDoCabelo());
+            result = pivo.getCorDoCabelo()
+                    .compareToIgnoreCase(comparado.getCorDoCabelo());
 
-           if (result == 0) {
-               result = pivo.getNome()
-                       .compareToIgnoreCase(comparado.getNome());
-               logSort[0]++;
-           }
+            if (result == 0) {
+                result = pivo.getNome()
+                        .compareToIgnoreCase(comparado.getNome());
+                logSort[0]++;
+            }
 
-           logSort[0]++;
+            logSort[0]++;
         }
 
         return result;
     }
-
-    /**
-     * Metodo intermediario para odernar atraves de quicksort.
-     * @param itensOrdenados Numero de itens a serem ordenados.
-     */
-    public void QuickSort(int itensOrdenados){
-        setLogSort(new int[2]);
-        QuickParcialRec(0, this.numItens - 1, itensOrdenados);
-    }
-
-    /**
-     * Metodo recursivo para ordenar lista por quicksort.
-     * @param ini Inicio da lista
-     * @param fim Final da lista
-     * @param max Numero maximo de itens ordenados
-     */
-    private void QuickParcialRec(int ini, int fim, int max){
-        int esq = ini, dir = fim;
-        int meio = (ini + fim) / 2;
-
-        Personagem pivo = lista[meio];
-
-        if(esq <= dir) {
-
-            while (comparar(pivo, lista[esq]) > 0) esq++;
-            while (comparar(pivo, lista[dir]) < 0) dir--;
-
-            if (esq <= dir) {
-                Personagem temp = lista[esq];
-                lista[esq] = lista[dir];
-                lista[dir] = temp;
-
-                esq++;
-                dir--;
-                logSort[1] += 3;
-            }
-
-        }
-
-        if(ini < dir) QuickParcialRec(ini, dir, max);
-        if(esq < max && esq < fim) QuickParcialRec(esq, fim, max);
-    }
-
-    /**
-     * Recupera log de ultima ordenacao
-     * @return Log contendo numero de comparacoes e moviementacoes
-     */
-    public int[] getLogSort(){
-        return this.logSort;
-    }
-
-    /**
-     * Realiza set de log de ordenacao
-     * @param log Log atualizado.
-     */
-    public void setLogSort(int[] log){
-        this.logSort = log;
-    }
 }
 
 //---------------------------- Classe Auxiliar
+
 class JSONObject{
 
     private final ArrayList<String> Keys = new ArrayList<>();
@@ -580,7 +560,7 @@ class JSONObject{
 
     /**
      * Inicializa um objeto JSON para leitura de registro JSON.
-     * @param JSON string JSON
+     * @param JSON
      */
     public JSONObject(String JSON){
 
@@ -632,7 +612,7 @@ class JSONObject{
     }
 
     /**
-     * Recupera um int Correspondente a chave
+     * Recupera um int correspondente a chave
      * @param chave Chave de busca
      * @return Valor inteiro correspondente
      */
@@ -689,7 +669,4 @@ class JSONObject{
         return this.valores.get(indice);
     }
 }
-
-
-
 
